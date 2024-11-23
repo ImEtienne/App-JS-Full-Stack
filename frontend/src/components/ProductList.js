@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Card, CardContent, Typography, Grid2 } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Paper, Typography } from '@mui/material';
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
@@ -12,20 +12,22 @@ const ProductList = () => {
   }, []);
 
   const fetchProducts = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/products');
-      if (Array.isArray(response.data)) {  // Vérifie si les données sont un tableau
-        setProducts(response.data);
-      } else {
-        throw new Error("Les données reçues ne sont pas un tableau");
+      try {
+        const response = await axios.get('http://localhost:5000/api/products');
+        if (Array.isArray(response.data.result)) {
+          setProducts(response.data.result);
+          console.log(response.data.result);  
+        } else {
+          throw new Error("Les données reçues ne sont pas un tableau");
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des produits', error);
+        setError('Erreur lors du chargement des produits');
+      } finally {
+        setLoading(false);  // Désactive l'état de chargement
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des produits', error);
-      setError('Erreur lors du chargement des produits');
-    } finally {
-      setLoading(false);  // Désactive l'état de chargement
-    }
   };
+
 
   // Gestion de l'affichage en cas de chargement ou d'erreur
   if (loading) {
@@ -37,26 +39,43 @@ const ProductList = () => {
   }
 
   return (
-    <Grid2 container spacing={2}>
-      {products.length > 0 ? (
-        products.map((product) => (
-          <Grid2 item xs={12} sm={6} md={4} key={product._id}>
-            <Card variant="outlined">
-              <CardContent>
-                <Typography variant="h6">{product.name}</Typography>
-                <Typography>Type: {product.type}</Typography>
-                <Typography>Prix: {product.price} €</Typography>
-                <Typography>Note: {product.rating}</Typography>
-                <Typography>Garantie: {product.warranty_years} an(s)</Typography>
-                <Typography>Disponible: {product.available ? 'Oui' : 'Non'}</Typography>
-              </CardContent>
-            </Card>
-          </Grid2>
-        ))
-      ) : (
-        <Typography>Aucun produit disponible.</Typography>  
-      )}
-    </Grid2>
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>#</TableCell> {/* Nouvelle colonne pour l'ID */}
+            <TableCell>Name</TableCell>
+            <TableCell>Type</TableCell>
+            <TableCell>Price</TableCell>
+            <TableCell>Rating</TableCell>
+            <TableCell>Warranty</TableCell>
+            <TableCell>Available</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {products.map((product) => (
+            <TableRow key={product._id}>
+              <TableCell>{product._id}</TableCell> {/* Affiche l'ID du produit */}
+              <TableCell>{product.name}</TableCell>
+              <TableCell>{product.type}</TableCell>
+              <TableCell>{product.price} €</TableCell>
+              <TableCell>{product.rating}</TableCell>
+              <TableCell>{product.warranty_years} years</TableCell>
+              <TableCell>{product.available ? 'Yes' : 'No'}</TableCell>
+              <TableCell>
+                <Button variant="contained" color="primary" style={{ marginRight: 10 }}>
+                  Modifier
+                </Button>
+                <Button variant="contained" color="error"> {/* Couleur rouge pour le bouton supprimer */}
+                  Supprimer
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 };
 
