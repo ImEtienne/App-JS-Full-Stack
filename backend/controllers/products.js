@@ -1,78 +1,97 @@
 const products = require('../models/Product');
+const Counter = require('../models/counter'); 
 
-const getProducts = ((req, res) => {
-    //res.json(products)
+// Récupérer tous les produits
+const getProducts = (req, res) => {
     products.find({})
         .then(result => res.status(200).json({ result }))
-        .catch(error => res.status(500).json({msg: error}))
-})
+        .catch(error => {
+            console.error('Erreur lors de la récupération des produits:', error);
+            res.status(500).json({ msg: 'Erreur interne', error: error.message });
+        });
+};
 
-const getProduct = ((req, res) => {
-    /*const id = Number(req.params.productID)
-    const product = products.find(product => product.id === id)
-
-        if (!product) {
-        return res.status(404).send('Product not found')
-    }
-    res.json(product)*/
+// Récupérer un produit par ID
+const getProduct = (req, res) => {
     products.findOne({ _id: req.params.productID })
-        .then(result => res.status(200).json({ result }))
-        .catch(() => res.status(404).json({msg: 'Product not found'}))
-    
-})
+        .then(result => {
+            if (!result) {
+                return res.status(404).json({ msg: 'Produit non trouvé' });
+            }
+            res.status(200).json({ result });
+        })
+        .catch(error => {
+            console.error('Erreur lors de la récupération du produit:', error);
+            res.status(500).json({ msg: 'Erreur interne', error: error.message });
+        });
+};
 
-const createProduct = ((req, res) => {
-    /*const newProduct = {
-        id: products.length + 1,
-        name: req.body.name,
-        type: req.body.string,
-        price: req.body.price,
-        rating: req.body.rating,
-        warranty_years: req.body.rating,
-        available: req.body.available
+// Créer un nouveau produit avec ID auto-incrémenté
+const createProduct = async (req, res) => {
+    try {
+        const counter = await Counter.findByIdAndUpdate(
+            { _id: 'productId' }, 
+            { $inc: { seq: 1 } }, 
+            { new: true, upsert: true } 
+        );
+
+        if (!counter) {
+            return res.status(500).json({ msg: 'Erreur lors de la génération de l\'ID du produit' });
+        }
+
+        const newProduct = new products({
+            _id: counter.seq, 
+            ...req.body       
+        });
+
+        const result = await newProduct.save();
+        res.status(201).json({ result });
+    } catch (error) {
+        console.error('Erreur lors de la création du produit:', error);
+        res.status(500).json({ msg: 'Erreur interne', error: error.message });
     }
-    products.push(newProduct)
-    res.status(201).json(newProduct)*/
-    products.create(req.body)
-        .then(result => res.status(200).json({ result }))
-        .catch((error) => res.status(500).json({msg:  error }))
-})
+};
 
-const updateProduct = ((req, res) => {
-    /*const id = Number(req.params.productID)
-    const index = products.findIndex(product => product.id === id)
-    const updatedProduct = {
-        id: products[index].id,
-        name: req.body.name,
-        type: req.body.string,
-        price: req.body.price,
-        rating: req.body.rating,
-        warranty_years: req.body.rating,
-        available: req.body.available
+// Mettre à jour un produit
+const updateProduct = async (req, res) => {
+    try {
+        const updated = await products.findOneAndUpdate({ _id: req.params.productID }, req.body, {
+        new: true,
+        runValidators: true,
+        });
+        
+        if (!updated) {
+        return res.status(404).json({ msg: 'Produit non trouvé' });
+        }
+        
+        res.status(200).json({ result: updated });
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour:', error);
+        res.status(500).json({ msg: 'Erreur interne', error: error.message });
     }
+};
 
-    products[index] = updatedProduct
-    res.status(200).json('Product updated')*/
-    products.findOneAndDelete({ _id: req.params.productID })
-        .then(result => res.status(200).json({ result }))
-        .catch((error) => res.status(404).json({msg: 'Product not found' }))
-})
 
-const deleteProduct = ((req, res) => {
-    /*const id = Number(req.params.productID)
-    const index = products.findIndex(product => product.id === id)
-    products.splice(index,1)
-    res.status(200).json('Product deleted')*/
-    products.findOneAndDelete({ _id: req.params.productID })
-        .then(result => res.status(200).json({ result }))
-        .catch((error) => res.status(404).json({msg: 'Product not found' }))
-})
+// Supprimer un produit
+const deleteProduct = async (req, res) => {
+    try {
+        const result = await products.findOneAndDelete({ _id: req.params.productID });
+        if (!result) {
+            return res.status(404).json({ msg: 'Produit non trouvé' });
+        }
+
+        res.status(200).json({ msg: 'Produit supprimé avec succès' });
+    } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        res.status(500).json({ msg: 'Erreur interne', error: error.message });
+    }
+};
+
 
 module.exports = {
     getProducts,
     getProduct,
     createProduct,
     updateProduct,
-    deleteProduct
-}
-
+    deleteProduct,
+};
